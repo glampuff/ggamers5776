@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GHICESTE CUVANTUL — Mobile 9:16</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://code.responsivevoice.org/responsivevoice.js?key=YUPBGTbq"></script>
+
+<style>
+/* Stilurile tale originale rămân neschimbate */
+:root{--bg1:#e0f2ff;--bg2:#f5f9ff;--accent:#ff5c7c;--card:#ffffff;--muted:#6b7280;--shadow-light: rgba(12,20,40,0.08);--shadow-medium: rgba(2,6,23,0.08);--shadow-strong: rgba(255,92,124,0.25);}
+*{box-sizing:border-box;}
+html,body{height:100%; margin:0; font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
+body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--bg1),var(--bg2));padding:12px; transition:background 0.5s ease-in-out;}
+.frame{width:100%; max-width:420px; aspect-ratio:9/16; background:#78feff; border-radius:28px; box-shadow:0 14px 40px var(--shadow-light); display:flex; flex-direction:column; padding:16px; gap:12px; position:relative; overflow:hidden; transition:box-shadow 0.3s ease, transform 0.3s ease;}
+.frame:hover { transform: translateY(-4px); box-shadow:0 20px 50px var(--shadow-light); }
+.top { display:flex; flex-direction:column; align-items:center; gap:25px; flex:1; justify-content:flex-start; padding-top:55px; }
+.title { font-weight:900; font-size:25px; color:#0f172a; letter-spacing:-0.4px; transition:color 0.3s; }
+.timer-wrap { display:flex; align-items:center; gap:10px; }
+.timer { font-weight:800; font-size:28px; color:var(--accent); transition:color 0.3s; }
+.word-box { width:92%; height:120px; min-height:96px; background:linear-gradient(180deg,#ffffff,#f0f7ff); border-radius:18px; border:1px solid rgba(15,23,42,0.08); display:flex; align-items:center; justify-content:center; padding:8px; overflow:hidden; box-shadow: 0 6px 18px var(--shadow-medium); position:relative; transition: background 0.3s, box-shadow 0.3s; }
+.letters { display:flex; gap:6px; align-items:center; justify-content:center; width:100%; max-width:100%; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; transition:gap 0.3s; }
+.letter { display:inline-flex; align-items:center; justify-content:center; min-width:0; user-select:none; font-weight:900; color:#07122a; transform-origin:center center; transition:transform 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s, opacity 0.3s; text-transform:uppercase; opacity:1; transform:scale(1);}
+.hidden-letter { color: rgba(7,18,42,0.18); letter-spacing:0.08em; font-weight:800; }
+.revealed { color:#07122a; transform:scale(1); }
+.winner-display { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; gap: 12px; background: #fff9c3; border-radius: 18px; box-shadow: 0 10px 28px var(--shadow-strong); padding: 16px; opacity: 0; transform: scale(0.8); animation: winnerAppear 0.6s forwards; }
+@keyframes winnerAppear { to { opacity: 1; transform: scale(1); } }
+.winner-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.1); }
+.winner-name { font-weight: 900; font-size: 20px; color: #07122a; text-align: center; }
+.bottom { display:flex; gap:12px; height:60%; }
+.panel { flex:1; background:#fff9c3; border-radius:14px; padding:4px; border:1px solid rgba(2,6,23,0.04); box-shadow:0 6px 18px var(--shadow-medium); display:flex; flex-direction:column; gap:8px; overflow:hidden; transition:box-shadow 0.3s, transform 0.3s; }
+.panel.blank { border-style:dashed; background:linear-gradient(180deg,#fbfbfb,#fff); }
+.panel:hover { transform: translateY(-2px); box-shadow:0 12px 24px var(--shadow-medium); }
+.panel .head { display:flex; align-items:center; gap:8px; font-weight:800; color:#0f172a; font-size:14px; }
+.entry { display:flex; align-items:center; gap:3px; padding:1px; border-radius:10px; overflow:hidden; transition:background 0.3s; }
+.entry:hover { background:rgba(255,92,124,0.05); }
+.avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid rgba(2,6,23,0.06); flex-shrink:0; }
+.name-wrapper { overflow:hidden; position:relative; flex:1; height:28px; display:flex; align-items:center; }
+.name { display:inline-block; font-weight:700; color:#0b1220; white-space:nowrap; font-size:14px; transition:color 0.3s; }
+.score { margin-left:1px; font-weight:900; color:var(--accent); transition:color 0.3s; }
+@keyframes scrollName { 0% { transform: translateX(0); } 100% { transform: translateX(var(--scroll-distance)); } }
+.scroll-anim { animation-name: scrollName; animation-timing-function: linear; animation-iteration-count: infinite; }
+</style>
+</head>
+<body>
+<div id="app" class="frame">
+  <div class="top">
+    <div class="title">GHICESTE CUVANTUL</div>
+    <div class="timer-wrap">
+      <div class="timer">{{timer}}s</div>
+    </div>
+
+    <div v-if="winner" class="winner-display">
+      <img :src="winnerAvatar" alt="" class="winner-photo">
+      <div class="winner-name">@{{ winner }}</div>
+    </div>
+    <div v-else class="word-box">
+      <div class="letters" :style="lettersStyle" ref="lettersContainer">
+        <div v-for="(c,i) in maskedChars" :key="'m'+i" class="letter" :class="c==='*'?'hidden-letter':'revealed'" :style="letterStyle(i)">
+          {{c}}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom">
+    <div class="panel">
+      <div class="head">🏆 Top Castigatori</div>
+      <div v-if="leaderboard.length" style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+        <div v-for="(p,index) in leaderboard" :key="p.name" class="entry">
+          <img :src="p.avatar||defaultAvatar" class="avatar">
+          <div class="name-wrapper">
+            <div class="name" :id="'name-'+index">@{{p.name}}</div>
+          </div>
+          <div class="score">{{p.score}}</div>
+        </div>
+      </div>
+      <div v-else style="color:var(--muted);margin-top:6px">Nimeni încă...</div>
+    </div>
+    <div class="panel blank"></div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+data(){return{
+  words:[], secretWord:'', maskedWord:'', timer:60, timerMax:60, intervalId:null,
+  leaderboard:[], winner:null, winnerAvatar:'', audioReady:false,
+  defaultAvatar:'https://via.placeholder.com/64/ddd/fff?text=?', computedFontSize:28, letterGap:6,
+  ws:null, applause:null,
+  engagementMessages:[
+    "Hai să ghicim următorul cuvânt!",
+    "Încă mai avem surprize!",
+    "Cine va ghici data viitoare?",
+    "Rămâi aproape pentru mai multă distracție!",
+    "Fii rapid și ghicește!",
+    "Vei reuși să ghicești?",
+    "Următorul cuvânt te așteaptă!",
+    "Nu rata șansa ta!",
+    "Continuăm cu entuziasm!",
+    "Cine va fi următorul câștigător?",
+    "Fii atent la litere!",
+    "Hai să ne distrăm!",
+    "Încă un cuvânt misterios!",
+    "Poți ghici următorul?",
+    "Pregătește-te pentru surprize!",
+    "Încă o șansă!",
+    "Cine va fi eroul?",
+    "Următorul cuvânt e provocator!",
+    "Hai să vedem cine ghicește!",
+    "Încă un câștigător urmează!",
+    "Rămâi conectat!",
+    "Nu te opri din ghicit!",
+    "Hai să continuăm!",
+    "Mai avem multă distracție!",
+    "Fii gata pentru următorul!",
+    "Surprize pentru toți!",
+    "Încă un cuvânt ascuns!",
+    "Cine va ghici data viitoare?",
+    "Continuăm jocul!",
+    "Rămâi aproape!",
+    "Nu rata șansa ta!",
+    "Încă un cuvânt pentru tine!",
+    "Cine va fi următorul?",
+    "Fii rapid!",
+    "Hai să ghicim împreună!",
+    "Distracție garantată!"
+  ],
+  engagementIdx:0
+};},
+computed:{
+  maskedChars(){ return (this.maskedWord||'').split(' '); },
+  secretWordChars(){ return (this.secretWord||'').toUpperCase().split(''); },
+  lettersStyle(){ return { fontSize:this.computedFontSize+'px', gap:this.letterGap+'px' }; }
+},
+methods:{
+  async loadWords(){
+    try{
+      const res = await fetch('cuvinte.json');
+      if(!res.ok) throw new Error('JSON not found');
+      const data = await res.json();
+      this.words = data.filter(w => w && w.trim().length >= 4).map(w=>w.trim().toLowerCase());
+      if(!this.words.length) this.words = ['programare','javascript','ghicitor','stream','tiktok','romania','frontend','design'];
+    }catch(e){
+      console.warn('Nu am putut încărca cuvintele din JSON, se folosesc cuvintele implicite');
+      this.words = ['programare','javascript','ghicitor','stream','tiktok','romania','frontend','design'];
+    }
+  },
+  pickWord(){
+    const w=this.words[Math.floor(Math.random()*this.words.length)];
+    this.secretWord=w.toLowerCase();
+    this.maskedWord=this.computeMasked(this.secretWord);
+    this.computeFontForWord();
+    this.winner=null;
+    this.winnerAvatar='';
+    console.log('%cCuvant secret:','color:green;font-weight:bold',this.secretWord.toUpperCase());
+  },
+  computeMasked(word){
+    const len=word.length;
+    const revealed=new Set();
+    revealed.add(0);
+    revealed.add(len-1);
+
+    let numLettersToShow=0;
+    if(len>=6) numLettersToShow=1;
+    if(len>=8) numLettersToShow=2;
+    if(len>=10) numLettersToShow=3;
+
+    while(revealed.size-2<numLettersToShow){
+      const pos=Math.floor(Math.random()*(len-2))+1;
+      revealed.add(pos);
+    }
+
+    return word.split('').map((c,i)=>revealed.has(i)?c.toUpperCase():'_').join(' ');
+  },
+  computeFontForWord(){
+    this.$nextTick(()=>{
+      const box=this.$refs.lettersContainer?.parentElement;
+      if(!box) return;
+      const chars=this.secretWord.length||1;
+      const gap=6;
+      const available=box.clientWidth-16*2;
+      const fs=Math.max(12,Math.min(42,Math.floor((available-(chars-1)*gap)*0.72)));
+      this.computedFontSize=fs;
+      this.letterGap=gap;
+      const letters = this.$refs.lettersContainer?.children || [];
+      for(let i=0;i<letters.length;i++){
+        setTimeout(()=>{letters[i].style.opacity=1; letters[i].style.transform='scale(1)';}, i*50);
+      }
+    });
+  },
+  startTimer(){ clearInterval(this.intervalId); this.timer=this.timerMax; this.intervalId=setInterval(()=>{ this.timer--; if(this.timer<=0){ clearInterval(this.intervalId); setTimeout(()=>this.startGame(),1600); }},1000); },
+  startGame(){ clearInterval(this.intervalId); this.pickWord(); this.startTimer(); },
+  letterStyle(i){return{transitionDelay:(i*0.05)+'s',fontSize:this.computedFontSize+'px'};},
+  initScroll(){
+    this.$nextTick(()=>{
+      this.leaderboard.forEach((p,index)=>{
+        const el = document.getElementById('name-'+index);
+        if(!el) return;
+        const parentWidth = el.parentElement.clientWidth;
+        const textWidth = el.scrollWidth;
+        if(textWidth>parentWidth){
+          const distance = textWidth - parentWidth;
+          el.style.setProperty('--scroll-distance', `-${distance}px`);
+          el.classList.add('scroll-anim');
+          el.style.animationDuration = `${distance*0.05 + 5}s`;
+        }
+      });
+    });
+  },
+  loadLeaderboard(){ try{ const raw=localStorage.getItem('gtw_leaderboard'); if(raw)this.leaderboard=JSON.parse(raw);}catch(e){this.leaderboard=[];} },
+  doConfetti(){ const end=Date.now()+3000; const loop=()=>{ confetti({particleCount:8,angle:60,spread:55,origin:{x:0.2,y:0.3}}); confetti({particleCount:8,angle:120,spread:55,origin:{x:0.8,y:0.3}}); if(Date.now()<end)requestAnimationFrame(loop);}; loop(); },
+  playApplause(){ if(!this.applause){ this.applause=new Audio('aplauze.mp3'); this.applause.load(); } this.applause.play().catch(()=>{}); },
+  speakText(text){ // functie TTS cu ResponsiveVoice
+    if(responsiveVoice.voiceSupport() && responsiveVoice.isPlaying()){ responsiveVoice.cancel(); }
+    responsiveVoice.speak(text,"Romanian Female",{rate:1,pitch:1,volume:1});
+  },
+  startEngagementLoop(){ // start loop 35 mesaje la 40s
+    setInterval(()=>{
+      this.speakText(this.engagementMessages[this.engagementIdx]);
+      this.engagementIdx = (this.engagementIdx + 1) % this.engagementMessages.length;
+    },40000);
+  },
+  checkGuessFromPayload(d){ 
+    if(!d||d.event!=='chat'||!d.data?.comment) return; 
+    const guess=d.data.comment.trim().toLowerCase(); 
+    if(!guess||this.winner) return; 
+    if(guess===this.secretWord){ 
+      this.winner=d.data.username||d.data.uniqueId||'Anonim'; 
+      this.winnerAvatar=d.data.avatarUrl||d.data.profilePictureUrl||this.defaultAvatar; 
+      clearInterval(this.intervalId); 
+      this.maskedWord=this.secretWord.toUpperCase().split('').join(' '); 
+      this.doConfetti(); 
+      this.playApplause();
+      this.initScroll(); 
+      this.updateLeaderboard(this.winner,this.winnerAvatar);
+      // TTS câștigător
+      this.speakText(`${this.winner} a ghicit cuvantul!`);
+      setTimeout(()=>this.startGame(),7000); 
+    } 
+  },
+  updateLeaderboard(name,avatar){ 
+    if(!name)return; 
+    const p=this.leaderboard.find(x=>x.name===name); 
+    if(p){p.score++; if(avatar)p.avatar=avatar;} 
+    else this.leaderboard.push({name,score:1,avatar:avatar||this.defaultAvatar}); 
+    this.leaderboard.sort((a,b)=>b.score-a.score); 
+    if(this.leaderboard.length>20)this.leaderboard.length=20; 
+    localStorage.setItem('gtw_leaderboard',JSON.stringify(this.leaderboard)); 
+    this.initScroll(); 
+  },
+  initWebSocket(){
+    this.ws = new WebSocket('ws://localhost:21213');
+    this.ws.onopen = ()=>{ console.log('%cWebSocket connected','color:green;font-weight:bold');};
+    this.ws.onmessage = (e)=>{
+      const data = JSON.parse(e.data);
+      this.checkGuessFromPayload(data);
+    };
+    this.ws.onclose = ()=>{ console.warn('WebSocket closed'); setTimeout(()=>this.initWebSocket(),3000);};
+    this.ws.onerror = (e)=>{ console.error('WebSocket error',e);};
+  },
+  resetLeaderboard(){ localStorage.removeItem('gtw_leaderboard'); this.leaderboard=[]; console.log('Leaderboard resetat'); }
+},
+mounted(){ 
+  this.loadLeaderboard();
+  this.loadWords().then(()=>{
+    this.startGame();
+    this.startEngagementLoop(); // start loop TTS engagement
+  });
+  this.initScroll();
+  this.initWebSocket();
+  ['click','touchstart'].forEach(ev=>{ document.addEventListener(ev,()=>{}, {once:true}); }); 
+  window.addEventListener('resize',()=>this.computeFontForWord()); 
+  window.addEventListener('orientationchange',()=>setTimeout(()=>this.computeFontForWord(),160)); 
+  console.log('%cTasteaza resetLeaderboard() pentru a reseta leaderboard-ul','color:blue;font-weight:bold');
+  window.resetLeaderboard = this.resetLeaderboard;
+}
+}).mount('#app');
+</script>
+</body>
+</html>
+
+
+
